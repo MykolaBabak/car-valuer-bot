@@ -73,28 +73,34 @@ async def process_country(message: types.Message, state: FSMContext):
     await state.update_data(country=message.text.upper())
     data = await state.get_data()
 
-    model, columns = joblib.load(MODEL_PATH)
+    try:
+        model, columns = joblib.load(MODEL_PATH)
 
-    input_dict = {
-        'brand': data['brand'],
-        'model': data['model'],
-        'age': 2025 - data['year'],
-        'mileage': data['mileage'],
-        'engine': data['engine'],
-        'fuel': data['fuel'],
-        'country': data['country']
-    }
+        input_dict = {
+            'brand': data['brand'],
+            'model': data['model'],
+            'age': 2025 - data['year'],
+            'mileage': data['mileage'],
+            'engine': data['engine'],
+            'fuel': data['fuel'],
+            'country': data['country']
+        }
 
-    input_vector = {col: 0 for col in columns}
-    for key, value in input_dict.items():
-        colname = f"{key}_{value}" if f"{key}_{value}" in columns else key
-        if colname in input_vector:
-            input_vector[colname] = value if isinstance(value, (int, float)) else 1
+        input_vector = {col: 0 for col in columns}
+        for key, value in input_dict.items():
+            colname = f"{key}_{value}" if f"{key}_{value}" in columns else key
+            if colname in input_vector:
+                input_vector[colname] = value if isinstance(value, (int, float)) else 1
 
-    X_input = np.array([list(input_vector.values())])
-    price = model.predict(X_input)[0]
+        X_input = np.array([list(input_vector.values())])
+        price = model.predict(X_input)[0]
 
-    await message.reply(f"Орієнтовна вартість авто: **${round(price, 2)}**")
+        await message.reply(f"Орієнтовна вартість авто: **${round(price, 2)}**")
+
+    except Exception as e:
+        logging.error(f"Помилка при оцінці авто: {e}")
+        await message.reply("Вибач, не вдалося виконати розрахунок. Перевір введені дані або спробуй пізніше.")
+
     await state.finish()
 
 if __name__ == '__main__':
